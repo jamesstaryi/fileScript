@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 import re
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
@@ -48,21 +48,29 @@ def on_select(event):
     global selected_state
     selected_state = state_combo.get()
 
-def on_drop(event):
-<<<<<<< HEAD
-    file_paths = event.data
-    file_paths = file_paths.strip().split()
-=======
-    file_path = event.data
-    if file_path.startswith("{") and file_path.endswith("}"):
-        file_path = file_path[1:-1]  # Remove curly braces from the file path
-    file_path = file_path.strip()
->>>>>>> 880c81c7e15b910d5cac55e6e34d9b5b7848c520
+def select_files():
+    file_paths = filedialog.askopenfilenames(
+        title="Select Files",
+        filetypes=[("Text Files", "*.txt")],
+        defaultextension=".txt"
+    )
     
     if selected_state:
         state_abbreviations = {abbrev for abbrev, name in state_data if name != selected_state}
         state_names = {name for abbrev, name in state_data if name != selected_state}
-<<<<<<< HEAD
+        
+        for file_path in file_paths:
+            find_states(file_path, state_abbreviations, state_names)
+    else:
+        print("Please select a state to exclude.")
+
+def on_drop(event):
+    file_paths = event.data
+    file_paths = file_paths.strip().split()
+    
+    if selected_state:
+        state_abbreviations = {abbrev for abbrev, name in state_data if name != selected_state}
+        state_names = {name for abbrev, name in state_data if name != selected_state}
         
         for file_path in file_paths:
             if file_path.startswith("{") and file_path.endswith("}"):
@@ -70,9 +78,6 @@ def on_drop(event):
             
             file_path = file_path.strip()
             find_states(file_path, state_abbreviations, state_names)
-=======
-        find_states(file_path, state_abbreviations, state_names)
->>>>>>> 880c81c7e15b910d5cac55e6e34d9b5b7848c520
     else:
         print("Please select a state to exclude.")
 
@@ -84,7 +89,7 @@ if __name__ == "__main__":
     # Setup GUI
     root = TkinterDnD.Tk()
     root.title("State Exclusion Tool")
-    root.geometry("400x200")
+    root.geometry("400x300")
     
     # Dropdown menu
     state_label = tk.Label(root, text="Select a state to exclude:")
@@ -93,12 +98,12 @@ if __name__ == "__main__":
     state_combo.bind("<<ComboboxSelected>>", on_select)
     state_combo.pack(pady=10)
     
+    # File selection button
+    file_button = tk.Button(root, text="Select Files", command=select_files)
+    file_button.pack(pady=20)
+    
     # Drop area
-<<<<<<< HEAD
     drop_label = tk.Label(root, text="Drag and drop files here")
-=======
-    drop_label = tk.Label(root, text="Drag and drop a file here")
->>>>>>> 880c81c7e15b910d5cac55e6e34d9b5b7848c520
     drop_label.pack(pady=20)
     drop_label.drop_target_register(DND_FILES)
     drop_label.dnd_bind('<<Drop>>', on_drop)
