@@ -49,12 +49,20 @@ def on_select(event):
     selected_state = state_combo.get()
 
 def on_drop(event):
+<<<<<<< HEAD
     file_paths = event.data
     file_paths = file_paths.strip().split()
+=======
+    file_path = event.data
+    if file_path.startswith("{") and file_path.endswith("}"):
+        file_path = file_path[1:-1]  # Remove curly braces from the file path
+    file_path = file_path.strip()
+>>>>>>> 880c81c7e15b910d5cac55e6e34d9b5b7848c520
     
     if selected_state:
         state_abbreviations = {abbrev for abbrev, name in state_data if name != selected_state}
         state_names = {name for abbrev, name in state_data if name != selected_state}
+<<<<<<< HEAD
         
         for file_path in file_paths:
             if file_path.startswith("{") and file_path.endswith("}"):
@@ -62,6 +70,9 @@ def on_drop(event):
             
             file_path = file_path.strip()
             find_states(file_path, state_abbreviations, state_names)
+=======
+        find_states(file_path, state_abbreviations, state_names)
+>>>>>>> 880c81c7e15b910d5cac55e6e34d9b5b7848c520
     else:
         print("Please select a state to exclude.")
 
@@ -83,7 +94,11 @@ if __name__ == "__main__":
     state_combo.pack(pady=10)
     
     # Drop area
+<<<<<<< HEAD
     drop_label = tk.Label(root, text="Drag and drop files here")
+=======
+    drop_label = tk.Label(root, text="Drag and drop a file here")
+>>>>>>> 880c81c7e15b910d5cac55e6e34d9b5b7848c520
     drop_label.pack(pady=20)
     drop_label.drop_target_register(DND_FILES)
     drop_label.dnd_bind('<<Drop>>', on_drop)
