@@ -126,6 +126,7 @@ def select_files():
 
                 # Create label for file name
                 file_label = tk.Label(file_frame, text=file_name, fg=color, padx=10, anchor='w')
+                file_label.path = file_path
                 file_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
                 file_label.bind("<Button-1>", show_file_output)
                 
@@ -183,6 +184,7 @@ def on_drop(event):
 
                 # Create label for file name
                 file_label = tk.Label(file_frame, text=file_name, fg=color, padx=10, anchor='w')
+                file_label.path = file_path
                 file_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
                 file_label.bind("<Button-1>", show_file_output)
                 
@@ -232,7 +234,7 @@ def upload_files():
                 file_name = os.path.basename(widget.cget("text"))
                 file_color = widget.cget("fg")
                 
-                src_path = widget.cget("text")
+                src_path = widget.path
                 dest_path = os.path.join(dest_folder, file_name)
                 
                 if os.path.exists(src_path):
