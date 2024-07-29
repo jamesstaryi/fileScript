@@ -28,6 +28,10 @@ def find_states(filename, state_abbreviations, state_names):
                     line_number += 1
                     continue
                 
+                if line.strip().startswith("-"):
+                    line_number += 1
+                    continue
+                
                 found = False
                 # Check for abbreviations with boundary conditions
                 for abbreviation in state_abbreviations:
@@ -54,7 +58,7 @@ def show_file_output(event):
     clicked_widget.update_idletasks()
     
     # Retrieve file path associated with the clicked label
-    file_path = clicked_widget.cget("text")
+    file_path = clicked_widget.path
     
     # Extract file name and color
     file_name = os.path.basename(file_path)
