@@ -64,7 +64,7 @@ def extract_version_from_filename(filename):
 
 def extract_version_and_date_from_file(file_path):
     version_pattern = re.compile(r'Version:\s*(.*)')
-    date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/\d{2}\b')
+    date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/(\d{2}|\d{4})\b') 
     
     try:
         with open(file_path, 'r') as file:
@@ -84,6 +84,15 @@ def extract_version_and_date_from_file(file_path):
         print(f"The file '{file_path}' was not found.")
     
     return None, None
+
+def parse_date(date_str):
+    date_formats = ['%m/%d/%Y', '%m/%d/%y']
+    for date_format in date_formats:
+        try:
+            return datetime.strptime(date_str, date_format)
+        except ValueError:
+            continue
+    return None
 
 def show_file_output(event):
     clicked_widget = event.widget
@@ -118,7 +127,7 @@ def show_file_output(event):
     
     if file_date:
         try:
-            file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
+            file_date_obj = parse_date(file_date)
             current_date = datetime.now()
             if abs((current_date - file_date_obj).days) > MAX_DATE_RANGE:
                 date_message = f"Date on file is not within 10 days of current date: {file_date}\n"
