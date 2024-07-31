@@ -69,17 +69,13 @@ def extract_version_and_date_from_file(file_path):
     try:
         with open(file_path, 'r') as file:
             for line in file:
-                if 'Version:' in line:
-                    # Extract version info
-                    version_match = version_pattern.search(line)
-                    if version_match:
-                        version_info = version_match.group(1).strip()
-                        
-                        # Extract date info from the same line
-                        date_match = date_pattern.search(line)
-                        date_info = date_match.group(0) if date_match else None
-                        
-                        return version_info, date_info
+                # Using re.IGNORECASE to catch all cases of "version"
+                version_match = version_pattern.search(line)
+                if version_match:
+                    version_info = version_match.group(1).strip()
+                    date_match = date_pattern.search(line)
+                    date_info = date_match.group(0) if date_match else None
+                    return version_info, date_info
     except FileNotFoundError:
         print(f"The file '{file_path}' was not found.")
     
