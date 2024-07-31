@@ -6,6 +6,8 @@ import os
 import shutil
 from datetime import datetime, timedelta
 
+MAX_DATE_RANGE = 30;
+
 def load_state_data(abbreviation_file, name_file):
     state_data = []
     try:
@@ -118,7 +120,7 @@ def show_file_output(event):
         try:
             file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
             current_date = datetime.now()
-            if abs((current_date - file_date_obj).days) > 10:
+            if abs((current_date - file_date_obj).days) > MAX_DATE_RANGE:
                 date_message = f"Date on file is not within 10 days of current date: {file_date}\n"
             else:
                 date_message = ""
@@ -195,7 +197,14 @@ def select_files():
             # Update existing entry or add a new one
             if existing_frame:
                 # Update existing entry
-                existing_frame.winfo_children()[0].config(fg=color)  # Example: Update color
+                existing_frame.winfo_children()[0].config(fg=color)
+
+                # Remove ignore button if file turns green
+                if color == 'green':
+                    for widget in existing_frame.winfo_children():
+                        if isinstance(widget, tk.Button) and widget.cget('text') == 'Ignore':
+                            widget.destroy()
+                            break
             else:
                 # Add new entry
                 file_frame = tk.Frame(file_list_frame)
@@ -277,7 +286,14 @@ def on_drop(event):
             # Update existing entry or add a new one
             if existing_frame:
                 # Update existing entry
-                existing_frame.winfo_children()[0].config(fg=color)  # Example: Update color
+                existing_frame.winfo_children()[0].config(fg=color)
+
+                # Remove ignore button if file turns green
+                if color == 'green':
+                    for widget in existing_frame.winfo_children():
+                        if isinstance(widget, tk.Button) and widget.cget('text') == 'Ignore':
+                            widget.destroy()
+                            break
             else:
                 # Add new entry
                 file_frame = tk.Frame(file_list_frame)
@@ -308,6 +324,9 @@ def ignore_file_entry(frame):
     for widget in frame.winfo_children():
         if isinstance(widget, tk.Label):
             widget.config(fg='orange')
+        if isinstance(widget, tk.Button) and widget.cget('text') == 'Ignore':
+            widget.destroy()
+            break
     # Update the state of the upload button
     update_upload_button_state()
 
@@ -390,7 +409,7 @@ if __name__ == "__main__":
     file_list_frame.pack(pady=10)
     
     # Upload file to Artifactory
-    upload_button = tk.Button(root, text="Upload to Artifactory", command=upload_files)
+    upload_button = tk.Button(root, text="Upload to Artifactory")#, command=upload_files)
     upload_button.pack(side=tk.BOTTOM, pady=10)
     
     # Initialize upload button state
