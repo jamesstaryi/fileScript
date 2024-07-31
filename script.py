@@ -38,17 +38,17 @@ def find_states(filename, state_abbreviations, state_names):
                     continue
                 
                 found = False
-                # Check for abbreviations with boundary conditions
+                # Check for abbreviations with boundary conditions, case-insensitive
                 for abbreviation in state_abbreviations:
-                    if re.search(rf'(^|[\s_]){re.escape(abbreviation)}($|[\s_])', line):
+                    if re.search(rf'(^|[\s_]){re.escape(abbreviation)}($|[\s_])', line, re.IGNORECASE):
                         output.append(f'Line {line_number}: {line.strip()} (Found Abbreviation: {abbreviation})')
                         found = True
                         break
                 
-                # Check for full state names with boundary conditions
+                # Check for full state names with boundary conditions, case-insensitive
                 if not found:
                     for state_name in state_names:
-                        if re.search(rf'(^|[\s_]){re.escape(state_name)}($|[\s_])', line):
+                        if re.search(rf'(^|[\s_]){re.escape(state_name)}($|[\s_])', line, re.IGNORECASE):
                             output.append(f'Line {line_number}: {line.strip()} (Found State Name: {state_name})')
                             break
 
