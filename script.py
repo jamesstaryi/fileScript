@@ -6,7 +6,7 @@ import os
 import shutil
 from datetime import datetime, timedelta
 
-MAX_DATE_RANGE = 30;
+MAX_DATE_RANGE = 2000;
 
 def load_state_data(abbreviation_file, name_file):
     state_data = []
@@ -189,9 +189,9 @@ def select_files():
             if title_version and file_version and title_version == file_version:
                 if file_date:
                     try:
-                        file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
+                        file_date_obj = parse_date(file_date)
                         current_date = datetime.now()
-                        color = 'green' if abs((current_date - file_date_obj).days) <= 10 and not has_state else 'red'
+                        color = 'green' if abs((current_date - file_date_obj).days) <= MAX_DATE_RANGE and not has_state else 'red'
                     except ValueError:
                         color = 'red'  # Invalid date format
                 else:
@@ -278,9 +278,9 @@ def on_drop(event):
             if title_version and file_version and title_version == file_version:
                 if file_date:
                     try:
-                        file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
+                        file_date_obj = parse_date(file_date)
                         current_date = datetime.now()
-                        color = 'green' if abs((current_date - file_date_obj).days) <= 10 and not has_state else 'red'
+                        color = 'green' if abs((current_date - file_date_obj).days) <= MAX_DATE_RANGE and not has_state else 'red'
                     except ValueError:
                         color = 'red'  # Invalid date format
                 else:
