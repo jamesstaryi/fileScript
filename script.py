@@ -4,6 +4,7 @@ import re
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
 import shutil
+from datetime import datetime, timedelta
 
 def load_state_data(abbreviation_file, name_file):
     state_data = []
@@ -24,10 +25,12 @@ def find_states(filename, state_abbreviations, state_names):
         with open(filename, 'r') as file:
             line_number = 1
             for line in file:
+                # Ignore if it is a CIVID ticket
                 if "CIVID" in line:
                     line_number += 1
                     continue
                 
+                # Ignore if line starts with "-": means it is a note and may contain flagged info
                 if line.strip().startswith("-"):
                     line_number += 1
                     continue
@@ -53,6 +56,33 @@ def find_states(filename, state_abbreviations, state_names):
     
     return output
 
+def extract_version_from_filename(filename):
+    match = re.search(r'(\d+\.\d+\.\d+\.\d+)', filename)
+    return match.group(1) if match else None
+
+def extract_version_and_date_from_file(file_path):
+    version_pattern = re.compile(r'Version:\s*(.*)')
+    date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/\d{2}\b')
+    
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                if 'Version:' in line:
+                    # Extract version info
+                    version_match = version_pattern.search(line)
+                    if version_match:
+                        version_info = version_match.group(1).strip()
+                        
+                        # Extract date info from the same line
+                        date_match = date_pattern.search(line)
+                        date_info = date_match.group(0) if date_match else None
+                        
+                        return version_info, date_info
+    except FileNotFoundError:
+        print(f"The file '{file_path}' was not found.")
+    
+    return None, None
+
 def show_file_output(event):
     clicked_widget = event.widget
     clicked_widget.update_idletasks()
@@ -65,17 +95,42 @@ def show_file_output(event):
     file_color = clicked_widget.cget("fg")
     
     if file_color == 'green':
-        messagebox.showinfo("Info", "This file does not contain any excluded states.")
+        messagebox.showinfo("Info", "This file does not contain any errors.")
         return
 
     state_abbreviations = {abbrev for abbrev, name in state_data if name != selected_state}
     state_names = {name for abbrev, name in state_data if name != selected_state}
     output = find_states(file_path, state_abbreviations, state_names)
     
-    if output:
-        output_text = '\n'.join(output)
+    # Check version and date match
+    title_version = extract_version_from_filename(file_name)
+    file_version, file_date = extract_version_and_date_from_file(file_path)
+    
+    version_mismatch_message = ""
+    if title_version and file_version and title_version != file_version:
+        version_mismatch_message = f"Version mismatch: Filename version ({title_version}) does not match file version ({file_version}).\n"
+    
+    missing_version_message = ""
+    if not title_version or not file_version:
+        missing_version_message = "Version number is missing in the filename or the file content.\n"
+    
+    if file_date:
+        try:
+            file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
+            current_date = datetime.now()
+            if abs((current_date - file_date_obj).days) > 10:
+                date_message = f"Date on file is not within 10 days of current date: {file_date}\n"
+            else:
+                date_message = ""
+        except ValueError:
+            date_message = f"Invalid date format found in file: {file_date}\n"
     else:
-        output_text = "No states found."
+        date_message = "No date found in the file.\n"
+    
+    if output:
+        output_text = f"{version_mismatch_message}{missing_version_message}{date_message}\n" + '\n'.join(output)
+    else:
+        output_text = f"{version_mismatch_message}{missing_version_message}{date_message}"
     
     # Create a popup window
     popup = tk.Toplevel(root)
@@ -118,7 +173,25 @@ def select_files():
                         break
 
             has_state = find_states(file_path, state_abbreviations, state_names)
-            color = 'green' if not has_state else 'red'
+            
+            # Extract version and date information
+            title_version = extract_version_from_filename(file_name)
+            file_version, file_date = extract_version_and_date_from_file(file_path)
+            
+            # Determine file color
+            if title_version and file_version and title_version == file_version:
+                if file_date:
+                    try:
+                        file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
+                        current_date = datetime.now()
+                        color = 'green' if abs((current_date - file_date_obj).days) <= 10 and not has_state else 'red'
+                    except ValueError:
+                        color = 'red'  # Invalid date format
+                else:
+                    color = 'red'  # Missing date
+            else:
+                color = 'red'
+            
             # Update existing entry or add a new one
             if existing_frame:
                 # Update existing entry
@@ -147,22 +220,28 @@ def select_files():
         update_upload_button_state()
 
     else:
-        print("Please select a state to exclude.")
+        messagebox.showinfo("Info", "Please select a State.")
 
 def on_drop(event):
     global current_directory
-    file_paths = event.data
-    file_paths = file_paths.strip().split()
+    file_paths = event.data.split('}')
+    
+    # Clean up paths and remove empty strings
+    file_paths = [fp.strip().strip('{').strip() for fp in file_paths if fp.strip()]
+    
+    # Handle the case where paths are not enclosed in braces
+    if len(file_paths) == 1 and ' ' in file_paths[0]:
+        # If the paths are not enclosed in braces and are space-separated
+        file_paths = file_paths[0].split()
+    
+    # Handle paths that still have '{' at the start
+    complete_file_paths = [fp if not fp.startswith('{') else fp[1:] for fp in file_paths]
     
     if selected_state:
         state_abbreviations = {abbrev for abbrev, name in state_data if name != selected_state}
         state_names = {name for abbrev, name in state_data if name != selected_state}
 
-        for file_path in file_paths:
-            if file_path.startswith("{") and file_path.endswith("}"):
-                file_path = file_path[1:-1]  # Remove curly braces from the file path
-            
-            file_path = file_path.strip()
+        for file_path in complete_file_paths:
             file_name = os.path.basename(file_path)
             current_directory = os.path.dirname(file_path)
             
@@ -176,7 +255,25 @@ def on_drop(event):
                         break
 
             has_state = find_states(file_path, state_abbreviations, state_names)
-            color = 'green' if not has_state else 'red'
+            
+            # Extract version and date information
+            title_version = extract_version_from_filename(file_name)
+            file_version, file_date = extract_version_and_date_from_file(file_path)
+            
+            # Determine file color
+            if title_version and file_version and title_version == file_version:
+                if file_date:
+                    try:
+                        file_date_obj = datetime.strptime(file_date, '%m/%d/%y')
+                        current_date = datetime.now()
+                        color = 'green' if abs((current_date - file_date_obj).days) <= 10 and not has_state else 'red'
+                    except ValueError:
+                        color = 'red'  # Invalid date format
+                else:
+                    color = 'red'  # Missing date
+            else:
+                color = 'red'
+            
             # Update existing entry or add a new one
             if existing_frame:
                 # Update existing entry
@@ -204,7 +301,7 @@ def on_drop(event):
         # Update the state of the upload button
         update_upload_button_state()
     else:
-        print("Please select a state to exclude.")
+        messagebox.showinfo("Info", "Please select a State.")
 
 def ignore_file_entry(frame):
     # Mark the file entry as ignored by changing its color or text
@@ -268,19 +365,19 @@ if __name__ == "__main__":
 
     # Setup GUI
     root = TkinterDnD.Tk()
-    root.title("State Exclusion Tool")
+    root.title("File Processor")
     root.geometry("500x500")
     
     # Dropdown menu
-    state_label = tk.Label(root, text="Select a state to exclude:")
+    state_label = tk.Label(root, text="Select a state for the Release Request:")
     state_label.pack(pady=10)
     state_combo = ttk.Combobox(root, values=[name for _, name in state_data])
     state_combo.bind("<<ComboboxSelected>>", on_select)
     state_combo.pack(pady=10)
     
     # File selection button
-    file_button = tk.Button(root, text="Select Files", command=select_files)
-    file_button.pack(pady=20)
+    select_button = tk.Button(root, text="Select Files", command=select_files)
+    select_button.pack(pady=20)
     
     # Drop area
     drop_label = tk.Label(root, text="Drag and drop files here")
