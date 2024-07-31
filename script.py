@@ -63,7 +63,7 @@ def extract_version_from_filename(filename):
     return match.group(1) if match else None
 
 def extract_version_and_date_from_file(file_path):
-    version_pattern = re.compile(r'version:\s*(.*)', re.IGNORECASE)
+    version_pattern = re.compile(r'version:\s*(\d+\.\d+\.\d+\.\d+)', re.IGNORECASE)
     date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/(\d{2}|\d{4})\b') 
     
     try:
