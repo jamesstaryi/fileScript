@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime, timedelta
 
 MAX_DATE_RANGE = 2000;
+previous_state = None
 
 def load_state_data(abbreviation_file, name_file):
     state_data = []
@@ -63,7 +64,7 @@ def extract_version_from_filename(filename):
     return match.group(1) if match else None
 
 def extract_version_and_date_from_file(file_path):
-    version_pattern = re.compile(r'version:\s*(\d+\.\d+\.\d+\.\d+)', re.IGNORECASE)
+    version_pattern = re.compile(r'version:\s*([^\s]+)', re.IGNORECASE)
     date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/(\d{2}|\d{4})\b') 
     
     try:
@@ -143,6 +144,11 @@ def show_file_output(event):
     popup = tk.Toplevel(root)
     popup.title(f"Output for {file_name}")
     popup.geometry("600x400")
+
+    # Position the popup relative to the root window
+    root_x = root.winfo_x()
+    root_y = root.winfo_y()
+    popup.geometry(f"+{root_x+50}+{root_y+50}")
     
     # Add a Text widget to display the output
     text_widget = tk.Text(popup, wrap=tk.WORD)
@@ -151,10 +157,36 @@ def show_file_output(event):
     text_widget.config(state=tk.DISABLED)
 
 def on_select(event):
-    global selected_state
-    selected_state = state_combo.get()
+    global selected_state, previous_state
+    
+    # Get the newly selected state
+    new_state = state_combo.get()
+    
+    # Check if a state change is needed
+    if selected_state and new_state != selected_state:
+        # Confirm the state switch
+        result = messagebox.askyesno("Confirm State Change", f"Are you sure you want to switch from '{selected_state}' to '{new_state}'? \n\n This will remove all the files.")
+        if not result:
+            # User cancelled the change, revert to previous state
+            state_combo.set(selected_state)
+            return
+        else:
+            # User agreed, remove all files
+            for widget in file_list_frame.winfo_children():
+                if isinstance(widget, tk.Frame):
+                    widget.destroy()
+            # Update the state of the upload button
+            update_upload_button_state()
+    
+    # Update the selected state
+    selected_state = new_state
+    previous_state = new_state
 
 def select_files():
+    if not selected_state:
+        messagebox.showinfo("Info", "Please select a state.")
+        return
+
     global current_directory
     file_paths = filedialog.askopenfilenames(
         title="Select Files",
@@ -221,9 +253,9 @@ def select_files():
                 file_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
                 file_label.bind("<Button-1>", show_file_output)
                 
-                # Create delete button
-                delete_button = tk.Button(file_frame, text="Delete", command=lambda f=file_frame: delete_file_entry(f))
-                delete_button.pack(side=tk.RIGHT)
+                # Create remove button
+                remove_button = tk.Button(file_frame, text="Remove", command=lambda f=file_frame: remove_file_entry(f))
+                remove_button.pack(side=tk.RIGHT)
                 
                 # Create ignore button if the file is red
                 if color == 'red':
@@ -237,6 +269,10 @@ def select_files():
         messagebox.showinfo("Info", "Please select a State.")
 
 def on_drop(event):
+    if not selected_state:
+        messagebox.showinfo("Info", "Please select a state.")
+        return
+
     global current_directory
     file_paths = event.data.split('}')
     
@@ -310,9 +346,9 @@ def on_drop(event):
                 file_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
                 file_label.bind("<Button-1>", show_file_output)
                 
-                # Create delete button
-                delete_button = tk.Button(file_frame, text="Delete", command=lambda f=file_frame: delete_file_entry(f))
-                delete_button.pack(side=tk.RIGHT)
+                # Create remove button
+                remove_button = tk.Button(file_frame, text="Remove", command=lambda f=file_frame: remove_file_entry(f))
+                remove_button.pack(side=tk.RIGHT)
                 
                 # Create ignore button if the file is red
                 if color == 'red':
@@ -325,22 +361,67 @@ def on_drop(event):
         messagebox.showinfo("Info", "Please select a State.")
 
 def ignore_file_entry(frame):
-    # Mark the file entry as ignored by changing its color or text
+    # Find the text from the relevant widget in the frame
+    file_text = ""
     for widget in frame.winfo_children():
         if isinstance(widget, tk.Label):
-            widget.config(fg='orange')
-        if isinstance(widget, tk.Button) and widget.cget('text') == 'Ignore':
-            widget.destroy()
+            file_text = widget.cget("text")
             break
-    # Update the state of the upload button
-    update_upload_button_state()
 
-def delete_file_entry(frame):
-    frame.destroy()
-    # Update the state of the upload button
-    update_upload_button_state()
+    # Confirm ignoring the file with the frame's text
+    result = messagebox.askyesno("Confirm Ignore", f"Are you sure you want to ignore the file '{file_text}'?")
+    if result:
+        # Mark the file entry as ignored by changing its color or text
+        for widget in frame.winfo_children():
+            if isinstance(widget, tk.Label):
+                widget.config(fg='orange')
+            if isinstance(widget, tk.Button) and widget.cget('text') == 'Ignore':
+                widget.destroy()
+                break
+        # Update the state of the upload button
+        update_upload_button_state()
+
+def remove_file_entry(frame):
+    # Find the text from the relevant widget in the frame
+    file_text = ""
+    for widget in frame.winfo_children():
+        if isinstance(widget, tk.Label):
+            file_text = widget.cget("text")
+            break
+
+    # Confirm deleting the file with the frame's text
+    result = messagebox.askyesno("Confirm Remove", f"Are you sure you want to remove the file '{file_text}'?")
+    if result:
+        frame.destroy()
+        # Update the state of the upload button
+        update_upload_button_state()
+
+def remove_all_files():
+    # Confirm removing all the files
+    result = messagebox.askyesno("Confirm Celar All", f"Are you sure you want to remove all the files?")
+    if result:
+        for widget in file_list_frame.winfo_children():
+            if isinstance(widget, tk.Frame):
+                widget.destroy()
+        # Update the state of the upload button
+        update_upload_button_state()
 
 def upload_files():
+    mgmt_textbox_content = mgmt_textbox.get()  # Get the content from the mgmt_textbox
+
+    if re.search(r'\d', mgmt_textbox_content):
+        # Ask for confirmation if numbers are found
+        result = messagebox.askyesno("Confirm Upload", f"Do you want to upload to MGMT-{mgmt_textbox_content}?")
+        if result:
+            # Show a confirmation message after successful upload
+            messagebox.showinfo("Upload Successful", f"The files were successfully uploaded to MGMT-{mgmt_textbox_content}.")
+            return
+
+    else:
+        # Show an error message if no numbers are found
+        messagebox.showerror("Input Error", "Please input a valid MGMT number.")
+
+def upload_files_to_directory():
     global current_directory
     if not file_list_frame.winfo_children():
         messagebox.showwarning("No Files", "No files to upload.")
@@ -371,6 +452,9 @@ def upload_files():
     messagebox.showinfo("Upload Complete", f"Files have been uploaded to {dest_folder}.")
 
 def update_upload_button_state():
+    # Check if there are any child frames in file_list_frame
+    has_files = any(isinstance(child, tk.Frame) for child in file_list_frame.winfo_children())
+    
     # Check if there are any red files
     has_red_files = any(
         child.winfo_children()[0].cget("fg") == 'red'
@@ -378,8 +462,15 @@ def update_upload_button_state():
         if isinstance(child, tk.Frame)
     )
     
-    # Enable or disable the upload button
-    upload_button.config(state=tk.DISABLED if has_red_files else tk.NORMAL)
+    # Update the state of the upload button
+    if has_files and not has_red_files:
+        upload_button.config(state=tk.NORMAL)
+    else:
+        upload_button.config(state=tk.DISABLED)
+
+def close_app():
+    if messagebox.askokcancel("Quit", "Do you really wish to quit?"):
+        root.destroy()
 
 if __name__ == "__main__":
     # Load state data
@@ -390,8 +481,15 @@ if __name__ == "__main__":
     # Setup GUI
     root = TkinterDnD.Tk()
     root.title("File Processor")
-    root.geometry("500x500")
+    root.geometry("500x700")
     
+    # MGMT input
+    mgmt_label = tk.Label(root, text="Enter MGMT:")
+    mgmt_label.pack(padx=5)
+    mgmt_textbox = tk.Entry(root, width=10)
+    mgmt_textbox.pack(padx=10, pady=10)
+    mgmt_textbox.config(justify='right')
+
     # Dropdown menu
     state_label = tk.Label(root, text="Select a state for the Release Request:")
     state_label.pack(pady=10)
@@ -404,21 +502,34 @@ if __name__ == "__main__":
     select_button.pack(pady=20)
     
     # Drop area
-    drop_label = tk.Label(root, text="Drag and drop files here")
-    drop_label.pack(pady=20)
-    drop_label.drop_target_register(DND_FILES)
-    drop_label.dnd_bind('<<Drop>>', on_drop)
-    
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', on_drop)
+
     # Listbox to display file names
     file_list_frame = tk.Frame(root)
     file_list_frame.pack(pady=10)
     
-    # Upload file to Artifactory
-    upload_button = tk.Button(root, text="Upload to Artifactory")#, command=upload_files)
-    upload_button.pack(side=tk.BOTTOM, pady=10)
+    # Create a frame to hold the buttons at the bottom
+    bottom_frame = tk.Frame(root)
+    bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+
+    # Create a container frame within the bottom frame to center the buttons
+    button_frame = tk.Frame(bottom_frame)
+    button_frame.pack()
+
+    # Create the remove button
+    remove_button = tk.Button(button_frame, text="Remove All", command=remove_all_files)
+    remove_button.pack(side=tk.LEFT, padx=10)
+
+    # Create the upload button
+    upload_button = tk.Button(button_frame, text="Upload to Artifactory", command=upload_files)
+    upload_button.pack(side=tk.LEFT, padx=10)
     
     # Initialize upload button state
     update_upload_button_state()
+
+    # Set up application close confirmation
+    root.protocol("WM_DELETE_WINDOW", close_app)
 
     # Run the GUI loop
     root.mainloop()
