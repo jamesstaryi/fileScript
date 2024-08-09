@@ -1,7 +1,9 @@
 ### Created by James Yi
 ### TODO - Link application to artifactory, need to use their APIs
 ###      - Make application work with fortify scans as well. Shouldn't be difficult, use pypdf pymupdf
+###      - Stop reading file after most recent section of release note - generally denoted by a line of - or =
 ### Note - Drag n drop breaks sometimes with file directories that contain spaces, still need to figure out a way to fix
+###      - Release note formats vary from state to state so some states may get flagged alot, such as NJ RT
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
