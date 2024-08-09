@@ -1,3 +1,7 @@
+### Created by James Yi
+### TODO - Link application to artifactory, need to use their APIs
+###      - Make application work with fortify scans as well. Shouldn't be difficult, use pypdf pymupdf
+
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import re
@@ -6,9 +10,10 @@ import os
 import shutil
 from datetime import datetime, timedelta
 
-MAX_DATE_RANGE = 2000;
+MAX_DATE_RANGE = 1000; # Maximum date from today allowed. For example, if you want files within 30 days only, then set it to 30
 previous_state = None
 
+# Loads the state data and abbreviations
 def load_state_data(abbreviation_file, name_file):
     state_data = []
     try:
@@ -22,6 +27,7 @@ def load_state_data(abbreviation_file, name_file):
         print(f"Error: {e}")
         return []
 
+# Go through the file to check for certain requirements
 def find_states(filename, state_abbreviations, state_names):
     output = []
     try:
@@ -59,10 +65,12 @@ def find_states(filename, state_abbreviations, state_names):
     
     return output
 
+# Get version number from filename - assuming version number is formatted with 4 numbers and 3 periods
 def extract_version_from_filename(filename):
     match = re.search(r'(\d+\.\d+\.\d+\.\d+)', filename)
     return match.group(1) if match else None
 
+# Get version number from the file and date from the most recent part of the release note
 def extract_version_and_date_from_file(file_path):
     version_pattern = re.compile(r'version:\s*([^\s]+)', re.IGNORECASE)
     date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/(\d{2}|\d{4})\b') 
@@ -70,7 +78,6 @@ def extract_version_and_date_from_file(file_path):
     try:
         with open(file_path, 'r') as file:
             for line in file:
-                # Using re.IGNORECASE to catch all cases of "version"
                 version_match = version_pattern.search(line)
                 if version_match:
                     version_info = version_match.group(1).strip()
@@ -82,6 +89,7 @@ def extract_version_and_date_from_file(file_path):
     
     return None, None
 
+# Parse the date to work with multiple date formats
 def parse_date(date_str):
     date_formats = ['%m/%d/%Y', '%m/%d/%y']
     for date_format in date_formats:
@@ -91,6 +99,7 @@ def parse_date(date_str):
             continue
     return None
 
+# When clicking on a file in the application
 def show_file_output(event):
     clicked_widget = event.widget
     clicked_widget.update_idletasks()
@@ -127,7 +136,7 @@ def show_file_output(event):
             file_date_obj = parse_date(file_date)
             current_date = datetime.now()
             if abs((current_date - file_date_obj).days) > MAX_DATE_RANGE:
-                date_message = f"Date on file is not within 10 days of current date: {file_date}\n"
+                date_message = f"Date on file is not within {MAX_DATE_RANGE} days of current date: {file_date}\n"
             else:
                 date_message = ""
         except ValueError:
@@ -156,6 +165,7 @@ def show_file_output(event):
     text_widget.insert(tk.END, output_text)
     text_widget.config(state=tk.DISABLED)
 
+# Swapping between states
 def on_select(event):
     global selected_state, previous_state
     
@@ -182,6 +192,7 @@ def on_select(event):
     selected_state = new_state
     previous_state = new_state
 
+# Using Select File button for file upload
 def select_files():
     if not selected_state:
         messagebox.showinfo("Info", "Please select a state.")
@@ -268,6 +279,7 @@ def select_files():
     else:
         messagebox.showinfo("Info", "Please select a State.")
 
+# Using drag n drop for file upload
 def on_drop(event):
     if not selected_state:
         messagebox.showinfo("Info", "Please select a state.")
@@ -360,6 +372,7 @@ def on_drop(event):
     else:
         messagebox.showinfo("Info", "Please select a State.")
 
+# Ignore file button
 def ignore_file_entry(frame):
     # Find the text from the relevant widget in the frame
     file_text = ""
@@ -381,6 +394,7 @@ def ignore_file_entry(frame):
         # Update the state of the upload button
         update_upload_button_state()
 
+# Remove file button
 def remove_file_entry(frame):
     # Find the text from the relevant widget in the frame
     file_text = ""
@@ -396,6 +410,7 @@ def remove_file_entry(frame):
         # Update the state of the upload button
         update_upload_button_state()
 
+# Remove ALL file button
 def remove_all_files():
     # Confirm removing all the files
     result = messagebox.askyesno("Confirm Celar All", f"Are you sure you want to remove all the files?")
@@ -406,21 +421,23 @@ def remove_all_files():
         # Update the state of the upload button
         update_upload_button_state()
 
+# TODO - Upload to artifactory button
 def upload_files():
     mgmt_textbox_content = mgmt_textbox.get()  # Get the content from the mgmt_textbox
 
     if re.search(r'\d', mgmt_textbox_content):
         # Ask for confirmation if numbers are found
-        result = messagebox.askyesno("Confirm Upload", f"Do you want to upload to MGMT-{mgmt_textbox_content}?")
+        result = messagebox.askyesno("Confirm Upload", f"Do you want to upload to MGMT-{mgmt_textbox_content}? \n (This hasn't actually been implemented)")
         if result:
             # Show a confirmation message after successful upload
-            messagebox.showinfo("Upload Successful", f"The files were successfully uploaded to MGMT-{mgmt_textbox_content}.")
+            messagebox.showinfo("Upload Successful", f"The files were successfully uploaded to MGMT-{mgmt_textbox_content}. \n (This hasn't actually been implemented)")
             return
 
     else:
         # Show an error message if no numbers are found
         messagebox.showerror("Input Error", "Please input a valid MGMT number.")
 
+# Use if you want upload button to download to local directories
 def upload_files_to_directory():
     global current_directory
     if not file_list_frame.winfo_children():
@@ -451,6 +468,7 @@ def upload_files_to_directory():
     
     messagebox.showinfo("Upload Complete", f"Files have been uploaded to {dest_folder}.")
 
+# Checks to see if upload button should be available or not
 def update_upload_button_state():
     # Check if there are any child frames in file_list_frame
     has_files = any(isinstance(child, tk.Frame) for child in file_list_frame.winfo_children())
@@ -468,6 +486,7 @@ def update_upload_button_state():
     else:
         upload_button.config(state=tk.DISABLED)
 
+# Exit the app
 def close_app():
     if messagebox.askokcancel("Quit", "Do you really wish to quit?"):
         root.destroy()
@@ -509,11 +528,9 @@ if __name__ == "__main__":
     file_list_frame = tk.Frame(root)
     file_list_frame.pack(pady=10)
     
-    # Create a frame to hold the buttons at the bottom
+    # Frame to hold the buttons at the bottom
     bottom_frame = tk.Frame(root)
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
-
-    # Create a container frame within the bottom frame to center the buttons
     button_frame = tk.Frame(bottom_frame)
     button_frame.pack()
 
