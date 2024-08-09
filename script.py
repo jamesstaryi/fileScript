@@ -18,7 +18,7 @@ previous_state = None
 def load_state_data(abbreviation_file, name_file):
     state_data = []
     try:
-        with open(abbreviation_file, 'r', encoding="utf8") as abbrev_file, open(name_file, 'r', encoding="utf8") as name_file:
+        with open(abbreviation_file, 'r', encoding="utf8", errors='ignore') as abbrev_file, open(name_file, 'r', encoding="utf8", errors='ignore') as name_file:
             for abbrev_line, name_line in zip(abbrev_file, name_file):
                 abbreviation = abbrev_line.strip()
                 state_name = name_line.strip()
@@ -32,7 +32,7 @@ def load_state_data(abbreviation_file, name_file):
 def find_states(filename, state_abbreviations, state_names):
     output = []
     try:
-        with open(filename, 'r', encoding="utf8") as file:
+        with open(filename, 'r', encoding="utf8", errors='ignore') as file:
             line_number = 1
             for line in file:
                 # Ignore if it is a CIVID ticket
@@ -77,7 +77,7 @@ def extract_version_and_date_from_file(file_path):
     date_pattern = re.compile(r'\b\d{1,2}/\d{1,2}/(\d{2}|\d{4})\b') 
     
     try:
-        with open(file_path, 'r', encoding="utf8") as file:
+        with open(file_path, 'r', encoding="utf8", errors='ignore') as file:
             for line in file:
                 version_match = version_pattern.search(line)
                 if version_match:
